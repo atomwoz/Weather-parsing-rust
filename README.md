@@ -1,3 +1,5 @@
+![build](https://github.com/atomwoz/Weather-parsing-rust/actions/workflows/rust.yml/badge.svg)
+
 # Weather'er CLI Summarizer
 
 ## This is interview task for Blocky Devs
@@ -20,5 +22,5 @@ If you want to run tests you can do it with the following command:
 cargo test
 ```
 
-Code is commented and should be easy to understand.  
+## Code is commented and should be easy to understand.  
 It uses TOKIO as IO library.

@@ -5,13 +5,20 @@
 To run it you just need to have rust installed and run the following command:
 
 ```bash
-cargo run
+cargo run --release
 ```
 
 If you don't want to use default file you can specify it as an argument:
 
 ```bash
-cargo run <path_to_file>
+cargo run --release <path_to_file>
 ```
 
-//TODO: Add proper README.
+If you want to run tests you can do it with the following command:
+
+```bash
+cargo test
+```
+
+Code is commented and should be easy to understand.  
+It uses TOKIO as IO library.

@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, fmt::Display};
-
+use feruca::Collator;
 use hashbrown::HashMap;
+use std::fmt::Display;
 
 // We don't need to use BTreeMap because we don't require sorting or updating data frequently.
 // We only need to store the data and sort it once.
@@ -29,17 +29,31 @@ impl CitiesWeather {
     }
 
     //Our final getter
-    pub fn into_sorted_vec(self) -> Vec<(String, CityEntry)> {
+    pub fn into_sorted_ascii_vec(self) -> Vec<(String, CityEntry)> {
         let mut vec: Vec<(_, _)> = self.entries.into_iter().collect();
+        //SORTING USING ORDINARY SORT
         vec.sort_by(|a, b| String::cmp(&a.0, &b.0));
+        vec
+    }
+    pub fn into_slow_unicode_vec(self) -> Vec<(String, CityEntry)> {
+        let mut vec: Vec<(_, _)> = self.entries.into_iter().collect();
+        //SORTING USING FERUCA'S UNICODE ORDERING
+        let mut collator = Collator::default();
+        vec.sort_by(|a, b| collator.collate(&a.0, &b.0));
         vec
     }
 }
 
-//Making fields private because updating needs logics
+//For usage convenience, implement From trait [witch is better than Into, because it automatically implements Into]
+impl From<CitiesWeather> for Vec<(String, CityEntry)> {
+    fn from(cities_weather: CitiesWeather) -> Self {
+        cities_weather.into_slow_unicode_vec()
+    }
+}
 
 // It is good practice to implement common traits for custom types. :)
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+//Making fields private because updating needs logics
 pub struct CityEntry {
     min_temp: f64,
     max_temp: f64,
@@ -80,6 +94,16 @@ impl CityEntry {
     pub fn max(&self) -> f64 {
         self.max_temp
     }
+    pub fn to_string(&self) -> String {
+        let round = |x: f64| -> f64 { (x * 10.0).round() / 10.0 };
+        let mut s = String::new();
+        s.push_str(round(self.min()).to_string().as_str());
+        s.push('/');
+        s.push_str(round(self.max()).to_string().as_str());
+        s.push('/');
+        s.push_str(round(self.avg()).to_string().as_str());
+        s
+    }
 }
 
 impl Display for CityEntry {
@@ -88,10 +112,72 @@ impl Display for CityEntry {
 
         write!(
             f,
-            "{}/{}/{}",
+            "{:.1}/{:.1}/{:.1}",
             round(self.min()),
             round(self.max()),
             round(self.avg())
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_city_entry() {
+        let mut entry = CityEntry::new(20.0);
+        assert_eq!(entry.min(), 20.0);
+        assert_eq!(entry.max(), 20.0);
+        assert_eq!(entry.avg(), 20.0);
+
+        entry.update(10.0);
+        assert_eq!(entry.min(), 10.0);
+        assert_eq!(entry.max(), 20.0);
+        assert_eq!(entry.avg(), 15.0);
+
+        entry.update(30.0);
+        assert_eq!(entry.min(), 10.0);
+        assert_eq!(entry.max(), 30.0);
+        assert_eq!(entry.avg(), 20.0);
+    }
+
+    #[test]
+    fn test_display_format() {
+        let mut entry = CityEntry::new(20.5);
+        entry.update(10.4);
+        entry.update(30.6);
+        assert_eq!(format!("{}", entry), "10.4/30.6/20.5");
+    }
+
+    #[test]
+    fn test_cities_weather_with_unicode() {
+        let mut cities = CitiesWeather::new();
+        cities.add("Paris".to_string(), 20.0);
+        cities.add("London".to_string(), 15.0);
+        cities.add("Paris".to_string(), 25.0);
+        cities.add("Óębłąk".to_string(), 25.0);
+
+        let sorted = cities.into_slow_unicode_vec();
+        assert_eq!(sorted.len(), 3);
+        assert_eq!(sorted[0].0, "London");
+        assert_eq!(sorted[1].0, "Óębłąk");
+        assert_eq!(sorted[2].0, "Paris");
+        assert_eq!(sorted[2].1.avg(), 22.5);
+    }
+    #[test]
+    fn test_cities_weather_with_ascii() {
+        let mut cities = CitiesWeather::new();
+        cities.add("Paris".to_string(), 20.0);
+        cities.add("London".to_string(), 15.0);
+        cities.add("Paris".to_string(), 25.0);
+        cities.add("Óębłąk".to_string(), 25.0);
+
+        let sorted = cities.into_sorted_ascii_vec();
+        assert_eq!(sorted.len(), 3);
+        assert_eq!(sorted[0].0, "London");
+        assert_eq!(sorted[1].0, "Paris");
+        assert_eq!(sorted[2].0, "Óębłąk");
+        assert_eq!(sorted[1].1.avg(), 22.5);
     }
 }

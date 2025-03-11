@@ -21,9 +21,20 @@ async fn main() -> io::Result<()> {
     //let time_start = std::time::Instant::now();
 
     //Reading file
-    let mut file = File::open(file_name).await?;
+    let file = File::open(file_name).await;
+    let mut file = match file {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("[ERROR] File can't be read: {}", e);
+            return Ok(());
+        }
+    };
     let mut contents = String::new();
-    file.read_to_string(&mut contents).await?;
+    let err = file.read_to_string(&mut contents).await;
+    if let Err(x) = err {
+        eprintln!("[ERROR] Reading file error: {}", x);
+        return Ok(());
+    }
 
     //Parsing file
     for line in contents.split_terminator('\n') {
